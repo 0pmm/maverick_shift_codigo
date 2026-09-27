@@ -1,4 +1,4 @@
-package br.com.oficina.modelo;
+package br.com.estetica.modelo;
 
 public enum UnidadeMedida {
     MILILITRO,

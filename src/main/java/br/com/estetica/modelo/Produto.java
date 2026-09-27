@@ -1,4 +1,4 @@
-package br.com.oficina.modelo;
+package br.com.estetica.modelo;
 
 import java.io.Serializable;
 import java.util.UUID;

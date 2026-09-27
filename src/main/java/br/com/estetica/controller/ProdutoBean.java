@@ -1,8 +1,8 @@
-package br.com.oficina.controller;
+package br.com.estetica.controller;
 
-import br.com.oficina.modelo.Produto;
-import br.com.oficina.modelo.UnidadeMedida;
-import br.com.oficina.service.ProdutoService;
+import br.com.estetica.modelo.Produto;
+import br.com.estetica.modelo.UnidadeMedida;
+import br.com.estetica.service.ProdutoService;
 import java.io.Serializable;
 import java.util.List;
 import javax.faces.application.FacesMessage;
@@ -20,13 +20,20 @@ public class ProdutoBean implements Serializable {
 
     private List<Produto> produtos;
     private Produto produtoSelecionado;
+    private String nomePesquisa;
 
     public void iniciar() {
-        listar();
+        if (produtos == null) {
+            listar();
+        }
     }
 
     public void listar() {
         produtos = produtoService.listarTodos();
+    }
+
+    public void pesquisar() {
+        produtos = produtoService.pesquisarPorNome(nomePesquisa);
     }
 
     public void novo() {
@@ -37,10 +44,11 @@ public class ProdutoBean implements Serializable {
         try {
             produtoService.salvar(produtoSelecionado);
             mensagem(FacesMessage.SEVERITY_INFO, "Produto salvo com sucesso.");
-            listar();
+            pesquisar();
             produtoSelecionado = new Produto();
         } catch (IllegalArgumentException e) {
             mensagem(FacesMessage.SEVERITY_WARN, e.getMessage());
+            FacesContext.getCurrentInstance().validationFailed();
         }
     }
 
@@ -51,7 +59,7 @@ public class ProdutoBean implements Serializable {
     public void excluir(Produto produto) {
         produtoService.excluir(produto.getId());
         mensagem(FacesMessage.SEVERITY_INFO, "Produto excluído.");
-        listar();
+        pesquisar();
     }
 
     private void mensagem(FacesMessage.Severity severidade, String texto) {
@@ -63,6 +71,14 @@ public class ProdutoBean implements Serializable {
 
     public List<Produto> getProdutos() {
         return produtos;
+    }
+
+    public String getNomePesquisa() {
+        return nomePesquisa;
+    }
+
+    public void setNomePesquisa(String nomePesquisa) {
+        this.nomePesquisa = nomePesquisa;
     }
 
     public Produto getProdutoSelecionado() {

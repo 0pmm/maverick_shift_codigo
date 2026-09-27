@@ -5,7 +5,7 @@
          http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
          version="4.0">
 
-    <display-name>Sistema Oficina</display-name>
+    <display-name>maverick-shift</display-name>
 
     <context-param>
         <param-name>javax.faces.PROJECT_STAGE</param-name>

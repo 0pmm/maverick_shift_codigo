@@ -1,7 +1,7 @@
-package br.com.oficina.service;
+package br.com.estetica.service;
 
-import br.com.oficina.dao.ProdutoDAO;
-import br.com.oficina.modelo.Produto;
+import br.com.estetica.dao.ProdutoDAO;
+import br.com.estetica.modelo.Produto;
 import java.util.List;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -27,6 +27,13 @@ public class ProdutoService {
 
     public List<Produto> listarTodos() {
         return produtoDAO.listarTodos();
+    }
+
+    public List<Produto> pesquisarPorNome(String nome) {
+        if (nome == null || nome.trim().isEmpty()) {
+            return listarTodos();
+        }
+        return produtoDAO.buscarPorNome(nome.trim());
     }
 
     private void validar(Produto produto) {

@@ -4,17 +4,19 @@
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
       xmlns:p="http://primefaces.org/ui">
 <h:head>
-    <title>Sistema Oficina</title>
+    <title>maverick-shift</title>
     <h:outputStylesheet library="css" name="style.css"/>
 </h:head>
 <h:body>
 
-    <p:menubar>
-        <p:menuitem value="Produtos" outcome="/produto/crud.xhtml"/>
-        <!-- próximos itens de menu conforme novos CRUDs forem criados -->
-        <!-- <p:menuitem value="Clientes" outcome="/cliente/crud.xhtml"/> -->
-        <!-- <p:menuitem value="Serviços" outcome="/servico/crud.xhtml"/> -->
-    </p:menubar>
+    <h:form id="formMenu">
+        <p:menubar>
+            <p:menuitem value="Produtos" outcome="/produto/crud.xhtml"/>
+            <!-- próximos itens de menu conforme novos CRUDs forem criados -->
+            <!-- <p:menuitem value="Clientes" outcome="/cliente/crud.xhtml"/> -->
+            <!-- <p:menuitem value="Serviços" outcome="/servico/crud.xhtml"/> -->
+        </p:menubar>
+    </h:form>
 
     <p:growl id="mensagens" showDetail="true"/>
 
