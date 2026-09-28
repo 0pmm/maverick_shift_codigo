@@ -1,0 +1,118 @@
+<ui:composition template="/template.xhtml"
+                 xmlns="http://www.w3.org/1999/xhtml"
+                 xmlns:h="http://xmlns.jcp.org/jsf/html"
+                 xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                 xmlns:p="http://primefaces.org/ui"
+                 xmlns:f="http://xmlns.jcp.org/jsf/core">
+
+    <ui:define name="conteudo">
+
+        <f:event listener="#{produtoBean.iniciar}" type="preRenderView"/>
+
+        <h:form id="formProduto">
+
+            <p:panel header="Produtos">
+
+                <p:commandButton value="Novo Produto"
+                                  icon="pi pi-plus"
+                                  actionListener="#{produtoBean.novo}"
+                                  process="@this"
+                                  update=":formDialogo:dlgProduto"
+                                  oncomplete="PF('dlgProdutoWidget').show()"/>
+
+                <p:outputLabel for="nomePesquisa" value="Pesquisar por nome:"/>
+                <p:inputText id="nomePesquisa" value="#{produtoBean.nomePesquisa}"/>
+                <p:commandButton value="Pesquisar"
+                                  icon="pi pi-search"
+                                  actionListener="#{produtoBean.pesquisar}"
+                                  process="@this nomePesquisa"
+                                  update="tabelaProdutos"/>
+
+                <p:dataTable id="tabelaProdutos"
+                             var="produto"
+                             value="#{produtoBean.produtos}"
+                             emptyMessage="Nenhum produto encontrado">
+
+                    <p:column headerText="Nome">
+                        <h:outputText value="#{produto.nome}"/>
+                    </p:column>
+
+                    <p:column headerText="Categoria">
+                        <h:outputText value="#{produto.categoria}"/>
+                    </p:column>
+
+                    <p:column headerText="Estoque">
+                        <h:outputText value="#{produto.estoque}">
+                            <f:convertNumber minFractionDigits="0" maxFractionDigits="2"/>
+                        </h:outputText>
+                    </p:column>
+
+                    <p:column headerText="Unidade">
+                        <h:outputText value="#{produto.unidadeMedida.descricao}"/>
+                    </p:column>
+
+                    <p:column headerText="Ações" style="width:120px">
+                        <p:commandButton icon="pi pi-pencil"
+                                          title="Editar"
+                                          actionListener="#{produtoBean.editar(produto)}"
+                                          process="@this"
+                                          update=":formDialogo:dlgProduto"
+                                          oncomplete="PF('dlgProdutoWidget').show()"/>
+                        <p:commandButton icon="pi pi-trash"
+                                          title="Excluir"
+                                          actionListener="#{produtoBean.excluir(produto)}"
+                                          process="@this"
+                                          update=":formProduto:tabelaProdutos :mensagens"
+                                          styleClass="ui-button-danger">
+                            <p:confirm header="Confirmação" message="Excluir este produto?" icon="pi pi-exclamation-triangle"/>
+                        </p:commandButton>
+                    </p:column>
+
+                </p:dataTable>
+
+            </p:panel>
+
+            <p:confirmDialog global="true">
+                <p:commandButton value="Sim" type="button" styleClass="ui-confirmdialog-yes" icon="pi pi-check"/>
+                <p:commandButton value="Não" type="button" styleClass="ui-confirmdialog-no" icon="pi pi-times"/>
+            </p:confirmDialog>
+
+        </h:form>
+
+        <!-- diálogo de criação/edição (form separado para não ser submetido pelos botões da tabela) -->
+        <h:form id="formDialogo">
+            <p:dialog header="Produto" widgetVar="dlgProdutoWidget" id="dlgProduto" modal="true" width="420">
+                <h:panelGrid id="painelProduto" columns="2" cellpadding="6"
+                             rendered="#{produtoBean.produtoSelecionado != null}">
+
+                    <p:outputLabel for="nome" value="Nome:"/>
+                    <p:inputText id="nome" value="#{produtoBean.produtoSelecionado.nome}" maxlength="150"/>
+
+                    <p:outputLabel for="categoria" value="Categoria:"/>
+                    <p:inputText id="categoria" value="#{produtoBean.produtoSelecionado.categoria}" maxlength="80"/>
+
+                    <p:outputLabel for="estoque" value="Estoque:"/>
+                    <p:inputNumber id="estoque" value="#{produtoBean.produtoSelecionado.estoque}"
+                                   minValue="0" decimalPlaces="2"/>
+
+                    <p:outputLabel for="unidade" value="Unidade de medida:"/>
+                    <p:selectOneMenu id="unidade" value="#{produtoBean.produtoSelecionado.unidadeMedida}">
+                        <f:selectItem itemLabel="Selecione" noSelectionOption="true"/>
+                        <f:selectItems value="#{produtoBean.unidadesMedida}" var="unidade"
+                                       itemValue="#{unidade}" itemLabel="#{unidade.descricao}"/>
+                    </p:selectOneMenu>
+
+                    <p:commandButton value="Salvar"
+                                      icon="pi pi-save"
+                                      actionListener="#{produtoBean.salvar}"
+                                      process="@form"
+                                      update=":formProduto:tabelaProdutos painelProduto :mensagens"
+                                      oncomplete="if (!args.validationFailed) PF('dlgProdutoWidget').hide()"/>
+
+                </h:panelGrid>
+            </p:dialog>
+        </h:form>
+
+    </ui:define>
+
+</ui:composition>

@@ -1,5 +1,6 @@
 package br.com.estetica.modelo;
 
+import br.com.estetica.modelo.enums.UnidadeMedida;
 import java.io.Serializable;
 import java.util.UUID;
 import javax.persistence.*;

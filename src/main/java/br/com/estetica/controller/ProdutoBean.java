@@ -1,7 +1,7 @@
 package br.com.estetica.controller;
 
 import br.com.estetica.modelo.Produto;
-import br.com.estetica.modelo.UnidadeMedida;
+import br.com.estetica.modelo.enums.UnidadeMedida;
 import br.com.estetica.service.ProdutoService;
 import java.io.Serializable;
 import java.util.List;
@@ -53,12 +53,18 @@ public class ProdutoBean implements Serializable {
     }
 
     public void editar(Produto produto) {
-        this.produtoSelecionado = produto;
+        // recarrega do banco para não alterar a linha da tabela caso a edição seja cancelada
+        this.produtoSelecionado = produtoService.buscarPorId(produto.getId());
     }
 
     public void excluir(Produto produto) {
-        produtoService.excluir(produto.getId());
-        mensagem(FacesMessage.SEVERITY_INFO, "Produto excluído.");
+        try {
+            produtoService.excluir(produto.getId());
+            mensagem(FacesMessage.SEVERITY_INFO, "Produto excluído.");
+        } catch (RuntimeException e) {
+            mensagem(FacesMessage.SEVERITY_ERROR,
+                    "Não foi possível excluir o produto (pode estar em uso por outro registro).");
+        }
         pesquisar();
     }
 
