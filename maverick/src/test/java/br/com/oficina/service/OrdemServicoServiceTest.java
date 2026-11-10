@@ -2,14 +2,12 @@ package br.com.oficina.service;
 
 import br.com.oficina.dao.AgendamentoDAO;
 import br.com.oficina.dao.ItemProdutoServicoDAO;
-import br.com.oficina.dao.ItemServicoAgendamentoDAO;
 import br.com.oficina.dao.MovimentacaoEstoqueDAO;
 import br.com.oficina.dao.OrdemServicoDAO;
 import br.com.oficina.dao.ProdutoDAO;
 import br.com.oficina.dao.UsuarioDAO;
 import br.com.oficina.modelo.Agendamento;
 import br.com.oficina.modelo.ItemProdutoServico;
-import br.com.oficina.modelo.ItemServicoAgendamento;
 import br.com.oficina.modelo.MovimentacaoEstoque;
 import br.com.oficina.modelo.OrdemServico;
 import br.com.oficina.modelo.Produto;
@@ -43,8 +41,6 @@ class OrdemServicoServiceTest {
     @Mock
     private AgendamentoDAO agendamentoDAO;
     @Mock
-    private ItemServicoAgendamentoDAO itemServicoAgendamentoDAO;
-    @Mock
     private ItemProdutoServicoDAO itemProdutoServicoDAO;
     @Mock
     private MovimentacaoEstoqueDAO movimentacaoEstoqueDAO;
@@ -57,9 +53,14 @@ class OrdemServicoServiceTest {
     private OrdemServicoService service;
 
     private Agendamento agendamento(String status) {
+        return agendamento(status, servico(100.0));
+    }
+
+    private Agendamento agendamento(String status, Servico servico) {
         Agendamento agendamento = new Agendamento();
         agendamento.setId(UUID.randomUUID());
         agendamento.setStatus(status);
+        agendamento.setServico(servico);
         return agendamento;
     }
 
@@ -68,13 +69,6 @@ class OrdemServicoServiceTest {
         servico.setId(UUID.randomUUID());
         servico.setPreco(preco);
         return servico;
-    }
-
-    private ItemServicoAgendamento itemServico(Agendamento agendamento, Servico servico) {
-        ItemServicoAgendamento item = new ItemServicoAgendamento();
-        item.setAgendamento(agendamento);
-        item.setServico(servico);
-        return item;
     }
 
     private ItemProdutoServico itemProduto(Servico servico, Produto produto, int quantidade) {
@@ -105,13 +99,11 @@ class OrdemServicoServiceTest {
     // ---- abrir ----
 
     @Test
-    void abrirSomaOsPrecosDosServicosEUsaOUsuarioLogado() {
-        Agendamento agendamento = agendamento("AGENDADO");
+    void abrirUsaOPrecoDoServicoEOUsuarioLogado() {
+        Agendamento agendamento = agendamento("AGENDADO", servico(200.0));
         Usuario logado = new Usuario();
         when(agendamentoDAO.findById(agendamento.getId())).thenReturn(Optional.of(agendamento));
         when(ordemServicoDAO.existsByAgendamentoId(agendamento.getId())).thenReturn(false);
-        when(itemServicoAgendamentoDAO.findByAgendamentoId(agendamento.getId())).thenReturn(List.of(
-                itemServico(agendamento, servico(120.0)), itemServico(agendamento, servico(80.0))));
         when(usuarioDAO.findByLogin("func")).thenReturn(Optional.of(logado));
         when(ordemServicoDAO.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
 
@@ -130,8 +122,6 @@ class OrdemServicoServiceTest {
         Usuario outro = new Usuario();
         UUID outroId = UUID.randomUUID();
         when(agendamentoDAO.findById(agendamento.getId())).thenReturn(Optional.of(agendamento));
-        when(itemServicoAgendamentoDAO.findByAgendamentoId(agendamento.getId()))
-                .thenReturn(List.of(itemServico(agendamento, servico(50.0))));
         when(usuarioDAO.findById(outroId)).thenReturn(Optional.of(outro));
         when(ordemServicoDAO.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
 
@@ -161,17 +151,6 @@ class OrdemServicoServiceTest {
         assertThatThrownBy(() -> service.abrir(agendamento.getId(), null, "func"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("já possui");
-    }
-
-    @Test
-    void naoAbreOsParaAgendamentoSemServicos() {
-        Agendamento agendamento = agendamento("AGENDADO");
-        when(agendamentoDAO.findById(agendamento.getId())).thenReturn(Optional.of(agendamento));
-        when(itemServicoAgendamentoDAO.findByAgendamentoId(agendamento.getId())).thenReturn(List.of());
-
-        assertThatThrownBy(() -> service.abrir(agendamento.getId(), null, "func"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("não possui serviços");
     }
 
     // ---- ciclo de vida ----
@@ -217,26 +196,21 @@ class OrdemServicoServiceTest {
     // ---- conclusão e baixa de estoque ----
 
     @Test
-    void concluirDaBaixaNoEstoqueSomandoProdutoRepetidoEntreServicos() {
-        Agendamento agendamento = agendamento("AGENDADO");
-        OrdemServico ordem = ordem("EM_ANDAMENTO", agendamento);
+    void concluirDaBaixaNoEstoqueDosProdutosDoServico() {
         Servico trocaOleo = servico(120.0);
-        Servico revisao = servico(300.0);
+        Agendamento agendamento = agendamento("AGENDADO", trocaOleo);
+        OrdemServico ordem = ordem("EM_ANDAMENTO", agendamento);
         Produto oleo = produto("Óleo 5W30", 10.0);
         Produto filtro = produto("Filtro de óleo", 3.0);
-        when(itemServicoAgendamentoDAO.findByAgendamentoId(agendamento.getId())).thenReturn(List.of(
-                itemServico(agendamento, trocaOleo), itemServico(agendamento, revisao)));
         when(itemProdutoServicoDAO.findByServicoId(trocaOleo.getId())).thenReturn(List.of(
                 itemProduto(trocaOleo, oleo, 4), itemProduto(trocaOleo, filtro, 1)));
-        when(itemProdutoServicoDAO.findByServicoId(revisao.getId())).thenReturn(List.of(
-                itemProduto(revisao, oleo, 5)));
         when(ordemServicoDAO.save(any())).thenAnswer(chamada -> chamada.getArgument(0));
 
         OrdemServico concluida = service.concluir(ordem.getId());
 
         assertThat(concluida.getStatus()).isEqualTo("CONCLUIDA");
         assertThat(agendamento.getStatus()).isEqualTo("CONCLUIDO");
-        assertThat(oleo.getEstoque()).isEqualTo(1.0);
+        assertThat(oleo.getEstoque()).isEqualTo(6.0);
         assertThat(filtro.getEstoque()).isEqualTo(2.0);
 
         ArgumentCaptor<MovimentacaoEstoque> captor = ArgumentCaptor.forClass(MovimentacaoEstoque.class);
@@ -248,18 +222,16 @@ class OrdemServicoServiceTest {
                     assertThat(mov.getData()).isNotNull();
                 })
                 .extracting(MovimentacaoEstoque::getQuantidade)
-                .containsExactlyInAnyOrder(9.0, 1.0);
+                .containsExactlyInAnyOrder(4.0, 1.0);
     }
 
     @Test
     void estoqueInsuficienteNaoAlteraNada() {
-        Agendamento agendamento = agendamento("AGENDADO");
-        OrdemServico ordem = ordem("EM_ANDAMENTO", agendamento);
         Servico servico = servico(120.0);
+        Agendamento agendamento = agendamento("AGENDADO", servico);
+        OrdemServico ordem = ordem("EM_ANDAMENTO", agendamento);
         Produto oleo = produto("Óleo 5W30", 10.0);
         Produto filtro = produto("Filtro de óleo", 0.0);
-        when(itemServicoAgendamentoDAO.findByAgendamentoId(agendamento.getId()))
-                .thenReturn(List.of(itemServico(agendamento, servico)));
         when(itemProdutoServicoDAO.findByServicoId(servico.getId())).thenReturn(List.of(
                 itemProduto(servico, oleo, 4), itemProduto(servico, filtro, 1)));
 

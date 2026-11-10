@@ -39,7 +39,10 @@ public class Agendamento {
     @JoinColumn(name = "cliente_id", nullable = false)
     private Cliente cliente;
 
-    // os serviços do agendamento ficam em ItemServicoAgendamento (1..* no diagrama)
+    @NotNull(message = "O serviço é obrigatório")
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "servico_id", nullable = false)
+    private Servico servico;
 
     @Override
     public boolean equals(Object o) {
