@@ -1,8 +1,8 @@
 package br.com.oficina.controller;
 
-import br.com.oficina.modelo.ItemServicoAgendamento;
 import br.com.oficina.modelo.MovimentacaoEstoque;
 import br.com.oficina.modelo.OrdemServico;
+import br.com.oficina.modelo.Servico;
 import br.com.oficina.service.OrdemServicoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,10 +52,10 @@ public class OrdemServicoController {
         return ordemServicoService.buscarPorId(id);
     }
 
-    @Operation(summary = "Serviços executados na ordem (vindos do agendamento)")
-    @GetMapping("/{id}/servicos")
-    public List<ItemServicoAgendamento> listarServicos(@PathVariable UUID id) {
-        return ordemServicoService.listarServicos(id);
+    @Operation(summary = "Serviço executado na ordem (vindo do agendamento)")
+    @GetMapping("/{id}/servico")
+    public Servico buscarServico(@PathVariable UUID id) {
+        return ordemServicoService.buscarServico(id);
     }
 
     @Operation(summary = "Baixas de estoque geradas pela ordem")

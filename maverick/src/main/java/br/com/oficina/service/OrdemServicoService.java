@@ -2,17 +2,16 @@ package br.com.oficina.service;
 
 import br.com.oficina.dao.AgendamentoDAO;
 import br.com.oficina.dao.ItemProdutoServicoDAO;
-import br.com.oficina.dao.ItemServicoAgendamentoDAO;
 import br.com.oficina.dao.MovimentacaoEstoqueDAO;
 import br.com.oficina.dao.OrdemServicoDAO;
 import br.com.oficina.dao.ProdutoDAO;
 import br.com.oficina.dao.UsuarioDAO;
 import br.com.oficina.modelo.Agendamento;
 import br.com.oficina.modelo.ItemProdutoServico;
-import br.com.oficina.modelo.ItemServicoAgendamento;
 import br.com.oficina.modelo.MovimentacaoEstoque;
 import br.com.oficina.modelo.OrdemServico;
 import br.com.oficina.modelo.Produto;
+import br.com.oficina.modelo.Servico;
 import br.com.oficina.modelo.Usuario;
 import br.com.oficina.modelo.enuns.TipoMovimentacao;
 import jakarta.persistence.EntityNotFoundException;
@@ -48,18 +47,16 @@ public class OrdemServicoService {
 
     private final OrdemServicoDAO ordemServicoDAO;
     private final AgendamentoDAO agendamentoDAO;
-    private final ItemServicoAgendamentoDAO itemServicoAgendamentoDAO;
     private final ItemProdutoServicoDAO itemProdutoServicoDAO;
     private final MovimentacaoEstoqueDAO movimentacaoEstoqueDAO;
     private final ProdutoDAO produtoDAO;
     private final UsuarioDAO usuarioDAO;
 
     public OrdemServicoService(OrdemServicoDAO ordemServicoDAO, AgendamentoDAO agendamentoDAO,
-            ItemServicoAgendamentoDAO itemServicoAgendamentoDAO, ItemProdutoServicoDAO itemProdutoServicoDAO,
-            MovimentacaoEstoqueDAO movimentacaoEstoqueDAO, ProdutoDAO produtoDAO, UsuarioDAO usuarioDAO) {
+            ItemProdutoServicoDAO itemProdutoServicoDAO, MovimentacaoEstoqueDAO movimentacaoEstoqueDAO,
+            ProdutoDAO produtoDAO, UsuarioDAO usuarioDAO) {
         this.ordemServicoDAO = ordemServicoDAO;
         this.agendamentoDAO = agendamentoDAO;
-        this.itemServicoAgendamentoDAO = itemServicoAgendamentoDAO;
         this.itemProdutoServicoDAO = itemProdutoServicoDAO;
         this.movimentacaoEstoqueDAO = movimentacaoEstoqueDAO;
         this.produtoDAO = produtoDAO;
@@ -83,8 +80,8 @@ public class OrdemServicoService {
     }
 
     @Transactional(readOnly = true)
-    public List<ItemServicoAgendamento> listarServicos(UUID id) {
-        return itemServicoAgendamentoDAO.findByAgendamentoId(buscarPorId(id).getAgendamento().getId());
+    public Servico buscarServico(UUID id) {
+        return buscarPorId(id).getAgendamento().getServico();
     }
 
     @Transactional(readOnly = true)
@@ -94,7 +91,7 @@ public class OrdemServicoService {
     }
 
     /**
-     * Abre a OS a partir de um agendamento. O valor total é a soma dos preços dos serviços agendados.
+     * Abre a OS a partir de um agendamento. O valor total é o preço do serviço agendado.
      * Sem funcionarioId, o responsável é o usuário logado.
      */
     public OrdemServico abrir(UUID agendamentoId, UUID funcionarioId, String loginUsuarioLogado) {
@@ -107,10 +104,6 @@ public class OrdemServicoService {
         if (ordemServicoDAO.existsByAgendamentoId(agendamentoId)) {
             throw new IllegalArgumentException("Este agendamento já possui uma ordem de serviço");
         }
-        List<ItemServicoAgendamento> servicos = itemServicoAgendamentoDAO.findByAgendamentoId(agendamentoId);
-        if (servicos.isEmpty()) {
-            throw new IllegalArgumentException("O agendamento não possui serviços");
-        }
 
         OrdemServico ordem = new OrdemServico();
         ordem.setAgendamento(agendamento);
@@ -119,7 +112,7 @@ public class OrdemServicoService {
                 : buscarFuncionarioPorLogin(loginUsuarioLogado));
         ordem.setDataAbertura(LocalDateTime.now().withNano(0));
         ordem.setStatus(ABERTA);
-        ordem.setValorTotal(servicos.stream().mapToDouble(item -> item.getServico().getPreco()).sum());
+        ordem.setValorTotal(agendamento.getServico().getPreco());
         return ordemServicoDAO.save(ordem);
     }
 
@@ -138,7 +131,7 @@ public class OrdemServicoService {
     }
 
     /**
-     * Conclui a OS: dá baixa no estoque dos produtos usados pelos serviços (MovimentacaoEstoque SAIDA)
+     * Conclui a OS: dá baixa no estoque dos produtos usados pelo serviço (MovimentacaoEstoque SAIDA)
      * e marca o agendamento como CONCLUIDO. Se faltar estoque de algum produto, nada é alterado.
      */
     public OrdemServico concluir(UUID id) {
@@ -147,12 +140,11 @@ public class OrdemServicoService {
 
         Map<UUID, Double> consumo = new LinkedHashMap<>();
         Map<UUID, Produto> produtos = new LinkedHashMap<>();
-        for (ItemServicoAgendamento itemServico : itemServicoAgendamentoDAO.findByAgendamentoId(ordem.getAgendamento().getId())) {
-            for (ItemProdutoServico itemProduto : itemProdutoServicoDAO.findByServicoId(itemServico.getServico().getId())) {
-                Produto produto = itemProduto.getProduto();
-                produtos.put(produto.getId(), produto);
-                consumo.merge(produto.getId(), itemProduto.getQuantidadeNecessaria().doubleValue(), Double::sum);
-            }
+        UUID servicoId = ordem.getAgendamento().getServico().getId();
+        for (ItemProdutoServico itemProduto : itemProdutoServicoDAO.findByServicoId(servicoId)) {
+            Produto produto = itemProduto.getProduto();
+            produtos.put(produto.getId(), produto);
+            consumo.merge(produto.getId(), itemProduto.getQuantidadeNecessaria().doubleValue(), Double::sum);
         }
 
         // confere tudo antes de mexer no estoque, para não baixar só parte dos produtos
