@@ -1,0 +1,1470 @@
+{
+  "info": {
+    "name": "Oficina Maverick - API",
+    "description": "Fluxo completo dos casos de uso UC01 a UC08. Rode na ordem (ou pelo Collection Runner): o login salva o token e cada cadastro salva o id usado nos passos seguintes.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "tokenFuncionario",
+      "value": ""
+    },
+    {
+      "key": "funcionarioId",
+      "value": ""
+    },
+    {
+      "key": "loginFuncionario",
+      "value": ""
+    },
+    {
+      "key": "clienteId",
+      "value": ""
+    },
+    {
+      "key": "produtoId",
+      "value": ""
+    },
+    {
+      "key": "servicoId",
+      "value": ""
+    },
+    {
+      "key": "agendamentoId",
+      "value": ""
+    },
+    {
+      "key": "ordemId",
+      "value": ""
+    },
+    {
+      "key": "dataAgendamento",
+      "value": ""
+    },
+    {
+      "key": "inicio",
+      "value": ""
+    },
+    {
+      "key": "fim",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "{",
+          "// periodo usado nos relatorios: 30 dias pra tras ate 30 dias pra frente",
+          "const pad = (n) => String(n).padStart(2, '0');",
+          "const data = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;",
+          "const dia = 24 * 60 * 60 * 1000;",
+          "pm.collectionVariables.set('inicio', data(new Date(Date.now() - 30 * dia)));",
+          "pm.collectionVariables.set('fim', data(new Date(Date.now() + 30 * dia)));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "UC01 - Login",
+      "item": [
+        {
+          "name": "Login com senha errada (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"admin\",\n  \"senha\": \"errada\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Acesso sem token (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login do gestor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"admin\",\n  \"senha\": \"admin123\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Usuario gestor criado automaticamente quando o banco esta vazio."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"token\", pm.response.json().token);",
+                  "pm.test(\"cargo = GESTOR\", () => pm.expect(pm.response.json().cargo).to.eql(\"GESTOR\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UC09 - Funcionarios",
+      "item": [
+        {
+          "name": "Cadastrar funcionario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Joao Pereira\",\n  \"login\": \"{{loginFuncionario}}\",\n  \"senha\": \"123456\",\n  \"cargo\": \"FUNCIONARIO\"\n}"
+            },
+            "description": "O login ganha um numero aleatorio pra collection poder rodar varias vezes sem dar login repetido."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"funcionarioId\", pm.response.json().id);",
+                  "pm.test(\"cargo = FUNCIONARIO\", () => pm.expect(pm.response.json().cargo).to.eql(\"FUNCIONARIO\"));",
+                  "pm.test(\"senha nao aparece na resposta\", () => pm.expect(pm.response.json()).to.not.have.property(\"senha\"));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "pm.collectionVariables.set('loginFuncionario', 'joao' + Math.floor(Math.random() * 100000));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar com login repetido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Outro Joao\",\n  \"login\": \"{{loginFuncionario}}\",\n  \"senha\": \"654321\",\n  \"cargo\": \"FUNCIONARIO\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar funcionarios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar funcionario por nome",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/busca?nome=Joao",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "busca"
+              ],
+              "query": [
+                {
+                  "key": "nome",
+                  "value": "Joao"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Atualizar funcionario (senha em branco mantem a atual)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/{{funcionarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "{{funcionarioId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Joao Pereira Lima\",\n  \"login\": \"{{loginFuncionario}}\",\n  \"senha\": \"\",\n  \"cargo\": \"FUNCIONARIO\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"nome = Joao Pereira Lima\", () => pm.expect(pm.response.json().nome).to.eql(\"Joao Pereira Lima\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login do funcionario (senha antiga continua valendo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{loginFuncionario}}\",\n  \"senha\": \"123456\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenFuncionario\", pm.response.json().token);",
+                  "pm.test(\"cargo = FUNCIONARIO\", () => pm.expect(pm.response.json().cargo).to.eql(\"FUNCIONARIO\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Funcionario tenta gerenciar funcionarios (403)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenFuncionario}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Funcionario tenta gerar relatorio (403)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relatorios?tipo=GERAL&inicio={{inicio}}&fim={{fim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relatorios"
+              ],
+              "query": [
+                {
+                  "key": "tipo",
+                  "value": "GERAL"
+                },
+                {
+                  "key": "inicio",
+                  "value": "{{inicio}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{fim}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenFuncionario}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Funcionario pode ver clientes (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenFuncionario}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UC07 - Clientes",
+      "item": [
+        {
+          "name": "Cadastrar cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Maria Silva\",\n  \"telefone\": \"11988887777\",\n  \"email\": \"maria@email.com\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"clienteId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar cliente invalido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"M\",\n  \"email\": \"nao-e-email\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar cliente por nome",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes/busca?nome=Maria",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "busca"
+              ],
+              "query": [
+                {
+                  "key": "nome",
+                  "value": "Maria"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Atualizar cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes/{{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "{{clienteId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Maria Silva Souza\",\n  \"telefone\": \"11988887777\",\n  \"email\": \"maria@email.com\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"nome = Maria Silva Souza\", () => pm.expect(pm.response.json().nome).to.eql(\"Maria Silva Souza\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UC02 - Produtos",
+      "item": [
+        {
+          "name": "Cadastrar produto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/produtos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "produtos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Cera automotiva\",\n  \"estoque\": 10,\n  \"categoria\": \"Limpeza\",\n  \"unidadeMedida\": \"UNIDADE\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"produtoId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar produtos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/produtos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "produtos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UC03 - Servicos",
+      "item": [
+        {
+          "name": "Cadastrar servico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/servicos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "servicos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"Lavagem completa\",\n  \"preco\": 150,\n  \"configuracao\": \"SEDAN\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"servicoId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vincular produto ao servico (usa 2 ceras)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/servicos/{{servicoId}}/produtos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "servicos",
+                "{{servicoId}}",
+                "produtos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"produtoId\": \"{{produtoId}}\",\n  \"quantidadeNecessaria\": 2\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Produtos do servico",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/servicos/{{servicoId}}/produtos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "servicos",
+                "{{servicoId}}",
+                "produtos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UC04 - Agendamentos",
+      "item": [
+        {
+          "name": "Agendar servico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/agendamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "agendamentos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dataHora\": \"{{dataAgendamento}}\",\n  \"cliente\": {\n    \"id\": \"{{clienteId}}\"\n  },\n  \"servico\": {\n    \"id\": \"{{servicoId}}\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"agendamentoId\", pm.response.json().id);",
+                  "pm.test(\"status = AGENDADO\", () => pm.expect(pm.response.json().status).to.eql(\"AGENDADO\"));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "// data futura aleatoria (1 a 20 dias, 8h-17h) pra nao bater horario se rodar de novo",
+                  "const pad = (n) => String(n).padStart(2, '0');",
+                  "const d = new Date(Date.now() + (1 + Math.floor(Math.random() * 20)) * 24 * 60 * 60 * 1000);",
+                  "d.setHours(8 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 60), 0, 0);",
+                  "pm.collectionVariables.set('dataAgendamento',",
+                  "  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agendar no passado (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/agendamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "agendamentos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dataHora\": \"2020-01-01T10:00:00\",\n  \"cliente\": {\n    \"id\": \"{{clienteId}}\"\n  },\n  \"servico\": {\n    \"id\": \"{{servicoId}}\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agendamentos do cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/agendamentos/cliente/{{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "agendamentos",
+                "cliente",
+                "{{clienteId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UC05 - Ordens de Servico",
+      "item": [
+        {
+          "name": "Abrir OS a partir do agendamento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordens-servico",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordens-servico"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agendamentoId\": \"{{agendamentoId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"ordemId\", pm.response.json().id);",
+                  "pm.test(\"status = ABERTA\", () => pm.expect(pm.response.json().status).to.eql(\"ABERTA\"));",
+                  "pm.test(\"valorTotal = 150\", () => pm.expect(pm.response.json().valorTotal).to.eql(150));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Abrir OS repetida (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordens-servico",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordens-servico"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agendamentoId\": \"{{agendamentoId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar OS",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordens-servico/{{ordemId}}/iniciar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordens-servico",
+                "{{ordemId}}",
+                "iniciar"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"status = EM_ANDAMENTO\", () => pm.expect(pm.response.json().status).to.eql(\"EM_ANDAMENTO\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Concluir OS (baixa no estoque)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordens-servico/{{ordemId}}/concluir",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordens-servico",
+                "{{ordemId}}",
+                "concluir"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"status = CONCLUIDA\", () => pm.expect(pm.response.json().status).to.eql(\"CONCLUIDA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Movimentacoes de estoque da OS",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordens-servico/{{ordemId}}/movimentacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordens-servico",
+                "{{ordemId}}",
+                "movimentacoes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estoque do produto caiu de 10 para 8",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/produtos/{{produtoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "produtos",
+                "{{produtoId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"estoque = 8\", () => pm.expect(pm.response.json().estoque).to.eql(8));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UC06 - Pagamentos",
+      "item": [
+        {
+          "name": "Pagar R$ 100 da OS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pagamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pagamentos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valor\": 100,\n  \"descricao\": \"Entrada via Pix\",\n  \"cliente\": {\n    \"id\": \"{{clienteId}}\"\n  },\n  \"ordemServico\": {\n    \"id\": \"{{ordemId}}\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagar R$ 80 (passa do saldo de R$ 50) (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pagamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pagamentos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valor\": 80,\n  \"cliente\": {\n    \"id\": \"{{clienteId}}\"\n  },\n  \"ordemServico\": {\n    \"id\": \"{{ordemId}}\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagar o saldo de R$ 50",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pagamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pagamentos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valor\": 50,\n  \"descricao\": \"Restante no cartao\",\n  \"cliente\": {\n    \"id\": \"{{clienteId}}\"\n  },\n  \"ordemServico\": {\n    \"id\": \"{{ordemId}}\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagamentos da OS",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pagamentos/ordem-servico/{{ordemId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pagamentos",
+                "ordem-servico",
+                "{{ordemId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"2 pagamentos\", () => pm.expect(pm.response.json()).to.have.length(2));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UC08 - Relatorios",
+      "item": [
+        {
+          "name": "Gerar relatorio GERAL",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relatorios?tipo=GERAL&inicio={{inicio}}&fim={{fim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relatorios"
+              ],
+              "query": [
+                {
+                  "key": "tipo",
+                  "value": "GERAL"
+                },
+                {
+                  "key": "inicio",
+                  "value": "{{inicio}}"
+                },
+                {
+                  "key": "fim",
+                  "value": "{{fim}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"tem as 4 partes\", () => pm.expect(pm.response.json()).to.include.keys(\"financeiro\", \"servicos\", \"produtos\", \"clientes\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historico de relatorios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relatorios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relatorios"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
